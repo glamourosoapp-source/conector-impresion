@@ -1,0 +1,17 @@
+{
+  "name": "glamouroso-print-agent",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Agente local de impresión térmica para el punto de venta de Glamouroso",
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/server.ts",
+    "start": "bun src/server.ts",
+    "typecheck": "tsc --noEmit",
+    "build:win": "bun build --compile --target=bun-windows-x64 src/server.ts --outfile dist/glamouroso-print-agent.exe"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5"
+  }
+}
