@@ -1,6 +1,7 @@
 import { appendFileSync } from "node:fs";
 import { loadConfig, type AgentConfig } from "./config";
 import { agentHostname, listPrinters, printRaw } from "./printers";
+import { isTooLarge, readBackup, writeBackup } from "./backup";
 
 /**
  * Agente de impresión del punto de venta de Glamouroso.
@@ -33,7 +34,7 @@ function corsHeaders(origin: string | null, agentConfig: AgentConfig): Record<st
   return {
     "Access-Control-Allow-Origin": allowed,
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, OPTIONS",
     "Access-Control-Max-Age": "600",
     Vary: "Origin",
   };
@@ -99,6 +100,37 @@ const server = Bun.serve({
         log("print falló", { error: (error as Error).message });
         return json({ error: (error as Error).message }, 500, headers);
       }
+    }
+
+    /**
+     * Respaldo de la cola de la caja.
+     *
+     * Solo guarda y devuelve: el agente nunca habla con el servidor de
+     * Glamouroso. Si la PC pierde el perfil de Chrome, esto es lo que permite
+     * recuperar las ventas cobradas que no habían subido.
+     */
+    if (url.pathname === "/pos/backup" && request.method === "PUT") {
+      try {
+        const raw = await request.text();
+        if (isTooLarge(raw)) {
+          return json({ error: "El respaldo es demasiado grande" }, 413, headers);
+        }
+        const payload = JSON.parse(raw) as Parameters<typeof writeBackup>[1];
+        if (!payload || !Array.isArray(payload.outbox)) {
+          return json({ error: "Respaldo inválido" }, 400, headers);
+        }
+        writeBackup(config.dataDir, payload);
+        return json({ ok: true, pending: payload.outbox.length }, 200, headers);
+      } catch (error) {
+        log("respaldo falló", { error: (error as Error).message });
+        return json({ error: (error as Error).message }, 500, headers);
+      }
+    }
+
+    if (url.pathname === "/pos/backup" && request.method === "GET") {
+      const payload = readBackup(config.dataDir);
+      if (!payload) return json({ outbox: [], counter: null, meta: null, savedAt: null }, 200, headers);
+      return json(payload, 200, headers);
     }
 
     return json({ error: "Ruta no encontrada" }, 404, headers);

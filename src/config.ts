@@ -25,6 +25,8 @@ export interface AgentConfig {
   /** Orígenes del POS autorizados a hablarle al agente. */
   allowedOrigins: string[];
   logPath: string;
+  /** Carpeta del agente: ahí vive el respaldo de la cola de la caja. */
+  dataDir: string;
 }
 
 export function loadConfig(): AgentConfig {
@@ -53,5 +55,6 @@ export function loadConfig(): AgentConfig {
     token,
     allowedOrigins,
     logPath: join(dir, "agent.log"),
+    dataDir: dir,
   };
 }
