@@ -68,3 +68,20 @@ En macOS y Linux el agente usa `lpstat`/`lp` para poder probarse fuera de Window
 - **Token inválido**: el token se regenera si se borra `token.txt`. Volver a copiarlo en la configuración del POS.
 - **El ticket sale con caracteres raros**: la impresora no está en la tabla CP850. Se puede cambiar en `escpos.ts` del Front (`ESC t`).
 - **No corta el papel**: la impresora no soporta el corte parcial (`GS V 66`). No impide imprimir.
+
+## Respaldo de la cola de la caja
+
+Desde 2026-09-18 el agente también guarda una copia de lo que la caja tiene sin subir.
+
+La caja cobra sin internet y guarda las ventas en IndexedDB, que vive dentro del perfil de Chrome: basta que alguien "limpie el navegador" para llevarse ventas que nunca llegaron al servidor. El agente ya corre en la misma PC, así que es el único lugar donde dejar una copia sin instalar nada más.
+
+| Método | Ruta | Qué hace |
+|---|---|---|
+| `PUT` | `/pos/backup` | Guarda la cola, el consecutivo del folio y los metadatos de la caja |
+| `GET` | `/pos/backup` | Devuelve el último respaldo, o vacío si no hay |
+
+Las dos piden el mismo token que `/print`. El archivo (`pos-backup.json`, en la carpeta de datos del agente) se escribe de forma **atómica**: primero un temporal y luego un rename, porque escribir encima del bueno lo deja a medias si la PC se apaga justo ahí, que es exactamente el escenario del que protege. Un respaldo corrupto se ignora al leerlo.
+
+**El agente no habla con el servidor de Glamouroso.** No tiene credenciales y no se las vamos a dar: esto es un espejo para restaurar, no un segundo camino de subida. Subir desde el agente con el navegador cerrado se evaluará después del piloto.
+
+La caja restaura sola: si al arrancar su base local está vacía y el agente tiene un respaldo con eventos, los vuelve a encolar y avisa en pantalla.
