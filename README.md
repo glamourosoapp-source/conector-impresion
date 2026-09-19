@@ -14,6 +14,51 @@ Cambió a **Conector de impresión** el 2026-09-19. En el CRM "Agente IA" ya es 
 
 Lo que **no** cambió, a propósito: la carpeta del repo (`PrintAgent/`), los identificadores del código (`PrintAgentConfig`, `detectPrintAgent`), la clave de `localStorage` (`pos.printAgent`) y la carpeta de datos (`GlamourosoPrintAgent`). Renombrar la clave desemparejaría todas las cajas ya configuradas, y renombrar la carpeta dejaría huérfanos el token y el respaldo de la cola. Cambió el nombre del producto, no el de las llaves.
 
+
+## Publicar una versión
+
+El instalador vive en las **publicaciones de GitHub** de este repo, no en un bucket: la dirección de la última versión no cambia nunca, GitHub la sirve como archivo adjunto (que es lo que hace que el navegador la descargue en vez de abrirla) y no hay nada que mantener ni pagar. La caja apunta ahí desde `NEXT_PUBLIC_CONNECTOR_INSTALLER_URL`, con ese valor por defecto:
+
+```
+https://github.com/glamourosoapp-source/conector-impresion/releases/latest/download/setup-conector-impresion.exe
+```
+
+El ejecutable se compila en cualquier sistema, pero **el instalador necesita Windows**: Inno Setup no tiene versión para macOS ni Linux.
+
+### 1. El ejecutable (desde cualquier máquina)
+
+```bash
+bun run build:win
+```
+
+Deja `dist/glamouroso-print-agent.exe` (~94 MB, Bun compila su runtime dentro).
+
+### 2. El instalador (en una PC con Windows)
+
+Requiere [Inno Setup](https://jrsoftware.org/isdl.php). Con el repo clonado y el `.exe` ya en `dist\`:
+
+```
+iscc installer\setup.iss
+```
+
+Sale `Output\setup-glamouroso-print-agent.exe`. **Renómbralo a `setup-conector-impresion.exe`**, que es el nombre que espera la caja.
+
+### 3. Publicarlo
+
+```bash
+gh release create v1.1.0 setup-conector-impresion.exe \
+  --title "Conector de impresión 1.1.0" \
+  --notes "Respaldo de la cola de la caja y cambio de nombre."
+```
+
+Desde ese momento el botón **Descargar el instalador** de `/pos/configuracion` baja esta versión, sin tocar el Front.
+
+### Sobre el aviso de Windows
+
+El ejecutable **no está firmado**, así que al abrirlo Windows muestra "Windows protegió su PC" y hay que dar clic en *Más información* → *Ejecutar de todos modos*. La pantalla de configuración de la caja ya lo explica paso a paso, con esas mismas palabras, para que quien instale no se asuste.
+
+Firmarlo quitaría el aviso, pero cuesta (certificado anual) y la reputación con SmartScreen tarda meses en construirse. Como el aviso lo ve **una sola vez quien monta la PC**, y nunca el cajero en su día a día, no se justifica todavía. Si en algún momento las sucursales se instalan solas, hay que reconsiderarlo.
+
 ## Seguridad
 
 - Escucha **solo en `127.0.0.1`**: nada de la red de la sucursal puede hablarle.
