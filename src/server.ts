@@ -4,7 +4,11 @@ import { agentHostname, listPrinters, printRaw } from "./printers";
 import { isTooLarge, readBackup, writeBackup } from "./backup";
 
 /**
- * Agente de impresión del punto de venta de Glamouroso.
+ * Conector de impresión del punto de venta de Glamouroso.
+ *
+ * Se llama "conector" y no "agente" a propósito: en el CRM "Agente IA" ya es el
+ * agente de WhatsApp, y en una llamada de soporte con una sucursal "no jala el
+ * agente" no puede significar dos cosas.
  *
  * Corre en la PC de la sucursal y **solo escucha en loopback** (127.0.0.1), así
  * que nada de la red local puede hablarle. El POS (una página https) sí puede:
@@ -25,7 +29,7 @@ function log(message: string, extra?: Record<string, unknown>): void {
   try {
     appendFileSync(config.logPath, `${line}\n`);
   } catch {
-    /* sin permiso de escritura el agente sigue imprimiendo */
+    /* sin permiso de escritura el conector sigue imprimiendo */
   }
 }
 
@@ -53,7 +57,7 @@ function authorized(request: Request): boolean {
 }
 
 const server = Bun.serve({
-  // Loopback a propósito: el agente no se expone a la red de la sucursal.
+  // Loopback a propósito: el conector no se expone a la red de la sucursal.
   hostname: "127.0.0.1",
   port: config.port,
 
@@ -66,14 +70,14 @@ const server = Bun.serve({
       return new Response(null, { status: 204, headers });
     }
 
-    // El health check no pide token: el POS lo usa para saber si hay agente y
+    // El health check no pide token: el POS lo usa para saber si hay conector y
     // no revela nada (nombre, versión y equipo).
     if (url.pathname === "/health") {
       return json({ name: "glamouroso-print-agent", version: VERSION, hostname: agentHostname() }, 200, headers);
     }
 
     if (!authorized(request)) {
-      return json({ error: "Token inválido. Cópialo de la ventana del agente." }, 401, headers);
+      return json({ error: "Token inválido. Cópialo de la ventana del Conector de impresión." }, 401, headers);
     }
 
     if (url.pathname === "/printers" && request.method === "GET") {
@@ -105,7 +109,7 @@ const server = Bun.serve({
     /**
      * Respaldo de la cola de la caja.
      *
-     * Solo guarda y devuelve: el agente nunca habla con el servidor de
+     * Solo guarda y devuelve: el conector nunca habla con el servidor de
      * Glamouroso. Si la PC pierde el perfil de Chrome, esto es lo que permite
      * recuperar las ventas cobradas que no habían subido.
      */
@@ -137,12 +141,12 @@ const server = Bun.serve({
   },
 });
 
-log(`Agente de impresión escuchando en http://127.0.0.1:${server.port}`);
+log(`Conector de impresión escuchando en http://127.0.0.1:${server.port}`);
 log(`Token de emparejamiento: ${config.token}`);
 log(`Orígenes permitidos: ${config.allowedOrigins.join(", ")}`);
 console.log("");
 console.log("================================================================");
-console.log("  Glamouroso · Agente de impresión");
+console.log("  Glamouroso · Conector de impresión");
 console.log("  Deja esta ventana abierta mientras uses la caja.");
 console.log("");
 console.log(`  Token para la configuración del POS:  ${config.token}`);

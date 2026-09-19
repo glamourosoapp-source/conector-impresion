@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { randomBytes } from "node:crypto";
 
 /**
- * Configuración del agente. El token se genera la primera vez y se guarda en
+ * Configuración del conector. El token se genera la primera vez y se guarda en
  * disco: es lo que el cajero copia una sola vez en la pantalla de configuración
  * del POS para emparejar esa caja con esta impresora.
  */
@@ -22,10 +22,10 @@ function dataDir(): string {
 export interface AgentConfig {
   port: number;
   token: string;
-  /** Orígenes del POS autorizados a hablarle al agente. */
+  /** Orígenes del POS autorizados a hablarle al conector. */
   allowedOrigins: string[];
   logPath: string;
-  /** Carpeta del agente: ahí vive el respaldo de la cola de la caja. */
+  /** Carpeta del conector: ahí vive el respaldo de la cola de la caja. */
   dataDir: string;
 }
 

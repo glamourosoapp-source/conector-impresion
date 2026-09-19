@@ -1,7 +1,7 @@
-; Instalador de la PC de sucursal: agente de impresión + acceso directo a la caja.
+; Instalador de la PC de sucursal: conector de impresión + acceso directo a la caja.
 ; Compilar con: iscc installer\setup.iss  (requiere dist\glamouroso-print-agent.exe)
 
-#define MyAppName "Glamouroso Agente de Impresion"
+#define MyAppName "Glamouroso Conector de Impresion"
 #define MyAppVersion "1.1.0"
 #define MyAppPublisher "Anawim"
 #define MyAppExeName "glamouroso-print-agent.exe"
@@ -54,11 +54,11 @@ Name: "{group}\{#PosShortcutName}"; Filename: "{code:GetBrowserPath}"; \
 
 [Run]
 ; Arranca al terminar la instalación para que el cajero vea el token.
-Filename: "{app}\{#MyAppExeName}"; Description: "Iniciar el agente y ver el token"; Flags: postinstall nowait skipifsilent
+Filename: "{app}\{#MyAppExeName}"; Description: "Iniciar el conector y ver el token"; Flags: postinstall nowait skipifsilent
 
 [Registry]
 ; Arranque automático al iniciar sesión: la caja no debe depender de que
-; alguien se acuerde de abrir el agente.
+; alguien se acuerde de abrir el conector.
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; \
   ValueName: "GlamourosoPrintAgent"; ValueData: """{app}\{#MyAppExeName}"""; Flags: uninsdeletevalue
 

@@ -6,11 +6,11 @@ import { dirname, join } from "node:path";
  *
  * El navegador guarda las ventas cobradas en IndexedDB, que vive dentro del
  * perfil de Chrome: basta que alguien "limpie el navegador" para llevarse
- * ventas que nunca llegaron al servidor. Este agente ya corre en la misma PC
+ * ventas que nunca llegaron al servidor. Este conector ya corre en la misma PC
  * para imprimir, así que es el único lugar donde la caja puede dejar una copia
  * sin instalar nada más.
  *
- * El agente **no sube nada al servidor**: no tiene credenciales y no se las
+ * El conector **no sube nada al servidor**: no tiene credenciales y no se las
  * vamos a dar (subir desde aquí se evalúa después del piloto). Es un espejo
  * para restaurar, y nada más.
  */

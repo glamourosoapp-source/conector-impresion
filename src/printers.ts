@@ -3,7 +3,7 @@ import { hostname } from "node:os";
 /**
  * Lista e imprime en las impresoras de Windows.
  *
- * Se usa PowerShell en vez de una librería nativa para que el agente compile a
+ * Se usa PowerShell en vez de una librería nativa para que el conector compile a
  * un solo `.exe` sin dependencias: `Get-Printer` para listar y la API
  * `winspool.drv` para escribir RAW (los comandos ESC/POS deben llegar tal cual,
  * sin que el driver los interprete como texto).
@@ -35,7 +35,7 @@ async function powershell(script: string): Promise<string> {
 
 export async function listPrinters(): Promise<PrinterInfo[]> {
   if (!IS_WINDOWS) {
-    // En macOS/Linux (desarrollo) se usa lpstat, para poder probar el agente.
+    // En macOS/Linux (desarrollo) se usa lpstat, para poder probar el conector.
     try {
       const proc = Bun.spawn(["lpstat", "-p"], { stdout: "pipe", stderr: "pipe" });
       const out = await new Response(proc.stdout).text();

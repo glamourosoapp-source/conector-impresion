@@ -1,29 +1,35 @@
-# Glamouroso · Agente de impresión
+# Glamouroso · Conector de impresión
 
 Servicio local que imprime los tickets del punto de venta en la impresora térmica de la sucursal **sin el diálogo del navegador**.
 
 ## Por qué existe
 
-El POS corre en Chrome. Un navegador no puede elegir impresora ni imprimir en silencio, y tampoco puede mandar comandos ESC/POS crudos (ancho de papel, negritas, corte de papel). Este agente sí: recibe el ticket ya armado desde la caja y lo escribe en RAW a la impresora de Windows.
+El POS corre en Chrome. Un navegador no puede elegir impresora ni imprimir en silencio, y tampoco puede mandar comandos ESC/POS crudos (ancho de papel, negritas, corte de papel). Este conector sí: recibe el ticket ya armado desde la caja y lo escribe en RAW a la impresora de Windows.
 
-Sin el agente, el POS sigue funcionando: al cobrar con **F1** se abre el diálogo de impresión del navegador con el ticket listo. El agente solo quita ese toque extra.
+Sin el conector, el POS sigue funcionando: al cobrar con **F1** se abre el diálogo de impresión del navegador con el ticket listo. El conector solo quita ese toque extra.
+
+## Se llamaba "agente de impresión"
+
+Cambió a **Conector de impresión** el 2026-09-19. En el CRM "Agente IA" ya es el agente de WhatsApp, y en una llamada con una sucursal "no jala el agente" no puede significar dos cosas.
+
+Lo que **no** cambió, a propósito: la carpeta del repo (`PrintAgent/`), los identificadores del código (`PrintAgentConfig`, `detectPrintAgent`), la clave de `localStorage` (`pos.printAgent`) y la carpeta de datos (`GlamourosoPrintAgent`). Renombrar la clave desemparejaría todas las cajas ya configuradas, y renombrar la carpeta dejaría huérfanos el token y el respaldo de la cola. Cambió el nombre del producto, no el de las llaves.
 
 ## Seguridad
 
 - Escucha **solo en `127.0.0.1`**: nada de la red de la sucursal puede hablarle.
-- Cada petición (salvo `/health`) exige el **token** que se genera en la primera ejecución y se guarda en `%ProgramData%\GlamourosoPrintAgent\token.txt`. La ventana del agente lo muestra al arrancar.
+- Cada petición (salvo `/health`) exige el **token** que se genera en la primera ejecución y se guarda en `%ProgramData%\GlamourosoPrintAgent\token.txt`. La ventana del conector lo muestra al arrancar.
 - El origen del POS debe estar en la lista blanca (`GLAM_ALLOWED_ORIGINS`).
 
 ## Instalación en una sucursal
 
 1. Correr el instalador `setup-glamouroso-print-agent.exe`. En el asistente, dejar marcada la tarea **Crear el acceso directo del Punto de venta** y confirmar la dirección de la caja.
-2. Abrir el agente. La ventana muestra el token.
+2. Abrir el conector. La ventana muestra el token.
 3. En la caja, entrar a **Configuración** (`/pos/configuracion`), pegar el token, elegir la impresora de la lista y presionar **Imprimir prueba**.
-4. El instalador deja el agente en el inicio de sesión, así que arranca solo con la PC.
+4. El instalador deja el conector en el inicio de sesión, así que arranca solo con la PC.
 
 ## El acceso directo del Punto de venta
 
-El instalador hace dos cosas en la PC de la sucursal, no una: instala el agente y deja en el escritorio el icono **Glamouroso Punto de venta**, para que el cajero abra la caja con un clic en el logo y no escribiendo una dirección.
+El instalador hace dos cosas en la PC de la sucursal, no una: instala el conector y deja en el escritorio el icono **Glamouroso Punto de venta**, para que el cajero abra la caja con un clic en el logo y no escribiendo una dirección.
 
 El acceso directo apunta al navegador en modo aplicación —`chrome.exe --app=<url de la caja>`— con `glamouroso-pos.ico` como icono, así que abre una ventana propia sin barra de direcciones ni pestañas. Busca **Chrome** en el registro (`App Paths`) y, si no está, **Edge**, que viene en todo Windows 10/11; sin ninguno de los dos avisa y no crea un acceso directo roto.
 
@@ -31,13 +37,13 @@ El acceso directo apunta al navegador en modo aplicación —`chrome.exe --app=<
 
 Es una alternativa a instalar la PWA desde la propia caja (botón **Instalar en el escritorio**): cualquiera de las dos deja el icono, y esta no depende de que alguien se acuerde de hacerlo en cada sucursal.
 
-**Solo Windows.** El instalador es Inno Setup y no tiene equivalente para macOS. En una Mac la caja se instala igual de bien, pero por el botón de la propia caja: Chrome deja la app en Launchpad y se arrastra al Dock. El agente de impresión sí corre en macOS (usa `lpstat`/`lp`), pero eso está ahí **para poder desarrollarlo y probarlo fuera de Windows**: no hay build compilado ni paquete para Mac, y no se ha validado contra una impresora térmica real en ese sistema. Las sucursales son PC con Windows.
+**Solo Windows.** El instalador es Inno Setup y no tiene equivalente para macOS. En una Mac la caja se instala igual de bien, pero por el botón de la propia caja: Chrome deja la app en Launchpad y se arrastra al Dock. El Conector de impresión sí corre en macOS (usa `lpstat`/`lp`), pero eso está ahí **para poder desarrollarlo y probarlo fuera de Windows**: no hay build compilado ni paquete para Mac, y no se ha validado contra una impresora térmica real en ese sistema. Las sucursales son PC con Windows.
 
 ## API
 
 | Método | Ruta | Para qué |
 |---|---|---|
-| GET | `/health` | Saber si hay agente (sin token). Devuelve nombre, versión y equipo. |
+| GET | `/health` | Saber si hay conector (sin token). Devuelve nombre, versión y equipo. |
 | GET | `/printers` | Impresoras instaladas en esa PC, con la predeterminada marcada. |
 | POST | `/print` | `{ printerName, dataBase64 }`: escribe esos bytes en RAW. |
 
@@ -50,7 +56,7 @@ bun run typecheck
 bun run build:win    # dist/glamouroso-print-agent.exe
 ```
 
-En macOS y Linux el agente usa `lpstat`/`lp` para poder probarse fuera de Windows; en producción usa `Get-Printer` y la API `winspool.drv` (`OpenPrinter` + `StartDocPrinter` con `DATATYPE = "RAW"`).
+En macOS y Linux el conector usa `lpstat`/`lp` para poder probarse fuera de Windows; en producción usa `Get-Printer` y la API `winspool.drv` (`OpenPrinter` + `StartDocPrinter` con `DATATYPE = "RAW"`).
 
 **Por qué no `Out-Printer`**: manda el contenido como texto y el driver reinterpreta los comandos ESC/POS. El ticket sale con basura y sin corte de papel.
 
@@ -64,24 +70,24 @@ En macOS y Linux el agente usa `lpstat`/`lp` para poder probarse fuera de Window
 
 ## Problemas comunes
 
-- **El POS dice que no detecta el agente**: revisar que la ventana esté abierta y que el puerto coincida con el de la configuración de la caja.
+- **El POS dice que no detecta el conector**: revisar que la ventana esté abierta y que el puerto coincida con el de la configuración de la caja.
 - **Token inválido**: el token se regenera si se borra `token.txt`. Volver a copiarlo en la configuración del POS.
 - **El ticket sale con caracteres raros**: la impresora no está en la tabla CP850. Se puede cambiar en `escpos.ts` del Front (`ESC t`).
 - **No corta el papel**: la impresora no soporta el corte parcial (`GS V 66`). No impide imprimir.
 
 ## Respaldo de la cola de la caja
 
-Desde 2026-09-18 el agente también guarda una copia de lo que la caja tiene sin subir.
+Desde 2026-09-18 el conector también guarda una copia de lo que la caja tiene sin subir.
 
-La caja cobra sin internet y guarda las ventas en IndexedDB, que vive dentro del perfil de Chrome: basta que alguien "limpie el navegador" para llevarse ventas que nunca llegaron al servidor. El agente ya corre en la misma PC, así que es el único lugar donde dejar una copia sin instalar nada más.
+La caja cobra sin internet y guarda las ventas en IndexedDB, que vive dentro del perfil de Chrome: basta que alguien "limpie el navegador" para llevarse ventas que nunca llegaron al servidor. El conector ya corre en la misma PC, así que es el único lugar donde dejar una copia sin instalar nada más.
 
 | Método | Ruta | Qué hace |
 |---|---|---|
 | `PUT` | `/pos/backup` | Guarda la cola, el consecutivo del folio y los metadatos de la caja |
 | `GET` | `/pos/backup` | Devuelve el último respaldo, o vacío si no hay |
 
-Las dos piden el mismo token que `/print`. El archivo (`pos-backup.json`, en la carpeta de datos del agente) se escribe de forma **atómica**: primero un temporal y luego un rename, porque escribir encima del bueno lo deja a medias si la PC se apaga justo ahí, que es exactamente el escenario del que protege. Un respaldo corrupto se ignora al leerlo.
+Las dos piden el mismo token que `/print`. El archivo (`pos-backup.json`, en la carpeta de datos del conector) se escribe de forma **atómica**: primero un temporal y luego un rename, porque escribir encima del bueno lo deja a medias si la PC se apaga justo ahí, que es exactamente el escenario del que protege. Un respaldo corrupto se ignora al leerlo.
 
-**El agente no habla con el servidor de Glamouroso.** No tiene credenciales y no se las vamos a dar: esto es un espejo para restaurar, no un segundo camino de subida. Subir desde el agente con el navegador cerrado se evaluará después del piloto.
+**El conector no habla con el servidor de Glamouroso.** No tiene credenciales y no se las vamos a dar: esto es un espejo para restaurar, no un segundo camino de subida. Subir desde el conector con el navegador cerrado se evaluará después del piloto.
 
-La caja restaura sola: si al arrancar su base local está vacía y el agente tiene un respaldo con eventos, los vuelve a encolar y avisa en pantalla.
+La caja restaura sola: si al arrancar su base local está vacía y el conector tiene un respaldo con eventos, los vuelve a encolar y avisa en pantalla.
