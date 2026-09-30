@@ -44,7 +44,7 @@ export function loadConfig(): AgentConfig {
 
   const allowedOrigins = (
     process.env.GLAM_ALLOWED_ORIGINS ||
-    "http://localhost:3000,https://glamouroso.vercel.app"
+    "http://localhost:3000,https://glamouroso.app"
   )
     .split(",")
     .map((origin) => origin.trim())

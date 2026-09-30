@@ -20,7 +20,7 @@ import { isTooLarge, readBackup, writeBackup } from "./backup";
  * PC podría mandar a imprimir.
  */
 
-const VERSION = "1.0.0";
+const VERSION = "1.1.0";
 const config = loadConfig();
 
 function log(message: string, extra?: Record<string, unknown>): void {

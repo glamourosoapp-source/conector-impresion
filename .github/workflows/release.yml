@@ -1,0 +1,47 @@
+# Compila el conector y su instalador en Windows y los publica como versión de
+# GitHub. Se dispara al subir una etiqueta `v*` (p. ej. `git tag v1.1.0 && git
+# push origin v1.1.0`). La caja descarga siempre la última desde
+# releases/latest/download/setup-conector-impresion.exe.
+name: Publicar conector
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - run: bun install --frozen-lockfile
+
+      - run: bun run build:win
+
+      # Inno Setup no siempre viene en la imagen del runner.
+      - name: Instalar Inno Setup
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) {
+            choco install innosetup -y --no-progress
+          }
+
+      - name: Compilar el instalador
+        shell: pwsh
+        run: |
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" installer\setup.iss
+          Move-Item installer\Output\setup-glamouroso-print-agent.exe setup-conector-impresion.exe
+
+      - name: Publicar la versión
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" setup-conector-impresion.exe `
+            --title "Conector de impresión ${{ github.ref_name }}" `
+            --generate-notes

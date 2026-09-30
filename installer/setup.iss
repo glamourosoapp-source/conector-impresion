@@ -7,7 +7,7 @@
 #define MyAppExeName "glamouroso-print-agent.exe"
 #define PosShortcutName "Glamouroso Punto de venta"
 #define PosIcoName "glamouroso-pos.ico"
-#define DefaultPosUrl "https://crm.glamouroso.mx/pos"
+#define DefaultPosUrl "https://glamouroso.app/pos"
 
 [Setup]
 AppId={{8E2A4C11-7B3D-4F55-9C21-POS-GLAMOUROSO}

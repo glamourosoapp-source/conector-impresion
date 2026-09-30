@@ -23,6 +23,19 @@ El instalador vive en las **publicaciones de GitHub** de este repo, no en un buc
 https://github.com/glamourosoapp-source/conector-impresion/releases/latest/download/setup-conector-impresion.exe
 ```
 
+### Lo normal: que lo compile GitHub
+
+Subir una etiqueta de versión basta. El workflow `.github/workflows/release.yml` corre en una máquina Windows de GitHub, compila el `.exe`, arma el instalador con Inno Setup, lo renombra a `setup-conector-impresion.exe` y crea la publicación:
+
+```bash
+git tag v1.1.0
+git push origin v1.1.0
+```
+
+Antes de etiquetar, sube la versión en los tres lugares: `package.json`, `VERSION` en `src/server.ts` y `MyAppVersion` en `installer/setup.iss`.
+
+### A mano, si GitHub Actions no está disponible
+
 El ejecutable se compila en cualquier sistema, pero **el instalador necesita Windows**: Inno Setup no tiene versión para macOS ni Linux.
 
 ### 1. El ejecutable (desde cualquier máquina)
@@ -41,7 +54,7 @@ Requiere [Inno Setup](https://jrsoftware.org/isdl.php). Con el repo clonado y el
 iscc installer\setup.iss
 ```
 
-Sale `Output\setup-glamouroso-print-agent.exe`. **Renómbralo a `setup-conector-impresion.exe`**, que es el nombre que espera la caja.
+Sale `installer\Output\setup-glamouroso-print-agent.exe`. **Renómbralo a `setup-conector-impresion.exe`**, que es el nombre que espera la caja.
 
 ### 3. Publicarlo
 
@@ -110,7 +123,7 @@ En macOS y Linux el conector usa `lpstat`/`lp` para poder probarse fuera de Wind
 | Variable | Default | Para qué |
 |---|---|---|
 | `GLAM_AGENT_PORT` | `9377` | Puerto de loopback. |
-| `GLAM_ALLOWED_ORIGINS` | `http://localhost:3000,https://glamouroso.vercel.app` | Orígenes del POS autorizados. |
+| `GLAM_ALLOWED_ORIGINS` | `http://localhost:3000,https://glamouroso.app` | Orígenes del POS autorizados. |
 | `GLAM_AGENT_DATA_DIR` | `%ProgramData%` | Dónde viven el token y el log. |
 
 ## Problemas comunes
