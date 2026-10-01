@@ -75,15 +75,24 @@ Firmarlo quitaría el aviso, pero cuesta (certificado anual) y la reputación co
 ## Seguridad
 
 - Escucha **solo en `127.0.0.1`**: nada de la red de la sucursal puede hablarle.
-- Cada petición (salvo `/health`) exige el **token** que se genera en la primera ejecución y se guarda en `%ProgramData%\GlamourosoPrintAgent\token.txt`. La ventana del conector lo muestra al arrancar.
+- Cada petición (salvo `/health`) exige el **token** que se genera en la primera ejecución y se guarda en `%ProgramData%\GlamourosoPrintAgent\token.txt`. Se consulta con `glamouroso-print-agent.exe --mostrar-token` (acceso *Ver token del Conector de impresión* del menú Inicio), que lo abre en el Bloc de notas.
 - El origen del POS debe estar en la lista blanca (`GLAM_ALLOWED_ORIGINS`).
 
 ## Instalación en una sucursal
 
 1. Correr el instalador `setup-glamouroso-print-agent.exe`. En el asistente, dejar marcada la tarea **Crear el acceso directo del Punto de venta** y confirmar la dirección de la caja.
-2. Abrir el conector. La ventana muestra el token.
+2. Al terminar, el instalador arranca el conector (sin ventana) y abre el token en el Bloc de notas.
 3. En la caja, entrar a **Configuración** (`/pos/configuracion`), pegar el token, elegir la impresora de la lista y presionar **Imprimir prueba**.
 4. El instalador deja el conector en el inicio de sesión, así que arranca solo con la PC.
+
+## Sin ventana (desde 1.2.0)
+
+Hasta la 1.1.0 el conector abría una consola negra con el token y los tickets impresos. Estorbaba al cajero y, peor, cerrarla apagaba la impresión. Ahora:
+
+- Se compila como aplicación de ventana (`scripts/hide-console.ts` cambia el subsistema PE de consola a GUI; el `--windows-hide-console` de Bun solo funciona compilando en Windows): no abre ninguna ventana, ni al arrancar ni al imprimir (PowerShell se lanza con `windowsHide`).
+- No va al escritorio. En el menú Inicio quedan **Glamouroso Conector de Impresion** (lo arranca si se detuvo; si ya corre, la segunda copia ve el puerto ocupado y se sale sin hacer nada) y **Ver token del Conector de impresión**.
+- Lo que antes salía en la consola sigue en `%ProgramData%\GlamourosoPrintAgent\agent.log`.
+- Como ya no hay ventana que cerrar, el instalador lo detiene con `taskkill` antes de reemplazar el `.exe` (actualización) y antes de desinstalar. Al actualizar desde la 1.1.0 borra el acceso del escritorio viejo; el token no cambia, así que las cajas ya emparejadas siguen funcionando.
 
 ## El acceso directo del Punto de venta
 
@@ -128,7 +137,7 @@ En macOS y Linux el conector usa `lpstat`/`lp` para poder probarse fuera de Wind
 
 ## Problemas comunes
 
-- **El POS dice que no detecta el conector**: revisar que la ventana esté abierta y que el puerto coincida con el de la configuración de la caja.
+- **El POS dice que no detecta el conector**: abrir *Glamouroso Conector de Impresion* desde el menú Inicio (o reiniciar la PC) y revisar que el puerto coincida con el de la configuración de la caja. El motivo suele estar en `agent.log`.
 - **Token inválido**: el token se regenera si se borra `token.txt`. Volver a copiarlo en la configuración del POS.
 - **El ticket sale con caracteres raros**: la impresora no está en la tabla CP850. Se puede cambiar en `escpos.ts` del Front (`ESC t`).
 - **No corta el papel**: la impresora no soporta el corte parcial (`GS V 66`). No impide imprimir.

@@ -38,8 +38,14 @@ export function loadConfig(): AgentConfig {
   if (existsSync(tokenPath)) {
     token = readFileSync(tokenPath, "utf8").trim();
   } else {
+    // "wx": el instalador arranca el conector y "Ver token" casi al mismo tiempo;
+    // si los dos generaran uno, la caja quedaría emparejada con el que se perdió.
     token = randomBytes(16).toString("hex");
-    writeFileSync(tokenPath, token, { encoding: "utf8" });
+    try {
+      writeFileSync(tokenPath, token, { encoding: "utf8", flag: "wx" });
+    } catch {
+      token = readFileSync(tokenPath, "utf8").trim();
+    }
   }
 
   const allowedOrigins = (

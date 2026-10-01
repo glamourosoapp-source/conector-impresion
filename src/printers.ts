@@ -22,7 +22,9 @@ const IS_WINDOWS = process.platform === "win32";
 async function powershell(script: string): Promise<string> {
   const proc = Bun.spawn(
     ["powershell.exe", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", script],
-    { stdout: "pipe", stderr: "pipe" }
+    // windowsHide: el conector corre sin consola, y sin esto cada ticket abriría
+    // (y cerraría) una ventana de PowerShell frente al cajero.
+    { stdout: "pipe", stderr: "pipe", windowsHide: true }
   );
   const [out, err, code] = await Promise.all([
     new Response(proc.stdout).text(),

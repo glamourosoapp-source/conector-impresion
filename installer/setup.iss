@@ -2,10 +2,11 @@
 ; Compilar con: iscc installer\setup.iss  (requiere dist\glamouroso-print-agent.exe)
 
 #define MyAppName "Glamouroso Conector de Impresion"
-#define MyAppVersion "1.1.0"
+#define MyAppVersion "1.2.0"
 #define MyAppPublisher "Anawim"
 #define MyAppExeName "glamouroso-print-agent.exe"
 #define PosShortcutName "Glamouroso Punto de venta"
+#define TokenShortcutName "Ver token del Conector de impresion"
 #define PosIcoName "glamouroso-pos.ico"
 #define DefaultPosUrl "https://glamouroso.app/pos"
 
@@ -38,8 +39,12 @@ Source: "{#PosIcoName}"; DestDir: "{app}"; Flags: ignoreversion
 Name: "posshortcut"; Description: "Crear el acceso directo del Punto de venta en el escritorio"; GroupDescription: "Punto de venta:"
 
 [Icons]
+; El conector corre sin ventana (desde 1.2.0) y arranca solo con la sesión: el
+; cajero no tiene nada que abrir, así que ya no va al escritorio. En el menú
+; Inicio quedan "iniciarlo" (por si se cerró desde el Administrador de tareas;
+; si ya corre, no hace nada) y "ver el token", para emparejar la caja.
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
+Name: "{group}\{#TokenShortcutName}"; Filename: "{app}\{#MyAppExeName}"; Parameters: "--mostrar-token"
 
 ; La caja se abre con el navegador en modo aplicación (`--app=`): ventana propia,
 ; sin barra de direcciones ni pestañas, con la G de Glamouroso como icono. Es lo
@@ -53,8 +58,14 @@ Name: "{group}\{#PosShortcutName}"; Filename: "{code:GetBrowserPath}"; \
   Tasks: posshortcut; Check: HasBrowser
 
 [Run]
-; Arranca al terminar la instalación para que el cajero vea el token.
-Filename: "{app}\{#MyAppExeName}"; Description: "Iniciar el conector y ver el token"; Flags: postinstall nowait skipifsilent
+; Arranca el conector siempre (también en instalación silenciosa); no abre ventana.
+Filename: "{app}\{#MyAppExeName}"; Flags: nowait runhidden
+; Al terminar, el token en el Bloc de notas para pegarlo en la configuración de la caja.
+Filename: "{app}\{#MyAppExeName}"; Parameters: "--mostrar-token"; Description: "Ver el token para emparejar la caja"; Flags: postinstall nowait skipifsilent
+
+[UninstallRun]
+; Sin ventana no hay cómo cerrarlo a mano: se detiene antes de borrar el .exe.
+Filename: "{sys}\taskkill.exe"; Parameters: "/F /IM {#MyAppExeName}"; Flags: runhidden; RunOnceId: "DetenerConector"
 
 [Registry]
 ; Arranque automático al iniciar sesión: la caja no debe depender de que
@@ -64,6 +75,10 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: 
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{commonappdata}\GlamourosoPrintAgent"
+
+[InstallDelete]
+; Las versiones anteriores a 1.2.0 dejaban el conector en el escritorio.
+Type: files; Name: "{autodesktop}\{#MyAppName}.lnk"
 
 [Code]
 var
@@ -112,6 +127,17 @@ end;
 function GetBrowserPath(Param: String): String;
 begin
   Result := BrowserPath;
+end;
+
+{ Al actualizar, el conector viejo sigue corriendo (y sin ventana no hay cómo
+  cerrarlo): se detiene para poder reemplazar el .exe. Al terminar se vuelve a
+  arrancar desde [Run]. El token y el respaldo de la cola no se tocan. }
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+var
+  ResultCode: Integer;
+begin
+  Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /IM {#MyAppExeName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Result := '';
 end;
 
 function HasBrowser(): Boolean;

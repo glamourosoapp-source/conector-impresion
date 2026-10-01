@@ -1,4 +1,5 @@
-import { appendFileSync } from "node:fs";
+import { appendFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { loadConfig, type AgentConfig } from "./config";
 import { agentHostname, listPrinters, printRaw } from "./printers";
 import { isTooLarge, readBackup, writeBackup } from "./backup";
@@ -18,9 +19,14 @@ import { isTooLarge, readBackup, writeBackup } from "./backup";
  * Cada petición exige el token que se generó en la primera ejecución, y el
  * origen debe estar en la lista blanca. Sin eso, cualquier página abierta en esa
  * PC podría mandar a imprimir.
+ *
+ * En Windows corre **sin ventana** (`scripts/hide-console.ts` al compilar): la
+ * consola negra con el token estorbaba al cajero y, si la cerraba, se apagaba la
+ * impresión. El token se consulta con `--mostrar-token`, que es lo que abre el
+ * acceso "Ver token del Conector de impresión" del menú Inicio.
  */
 
-const VERSION = "1.1.0";
+const VERSION = "1.2.0";
 const config = loadConfig();
 
 function log(message: string, extra?: Record<string, unknown>): void {
@@ -56,7 +62,55 @@ function authorized(request: Request): boolean {
   return header === `Bearer ${config.token}`;
 }
 
-const server = Bun.serve({
+/**
+ * Escribe el token con instrucciones en un .txt y lo abre en el Bloc de notas.
+ * Sin consola no hay otro lugar donde mostrarlo, y el Bloc de notas deja
+ * seleccionarlo y copiarlo, que es justo lo que hay que hacer con él.
+ */
+function showToken(): void {
+  const path = join(config.dataDir, "token-para-la-caja.txt");
+  writeFileSync(
+    path,
+    [
+      "Glamouroso · Conector de impresión",
+      "",
+      "Copia este token y pégalo en la caja, en Configuración → Token de emparejamiento:",
+      "",
+      config.token,
+      "",
+      "Puedes cerrar esta ventana. El conector sigue funcionando en segundo plano.",
+      "",
+    ].join("\r\n"),
+    "utf8"
+  );
+  if (process.platform === "win32") {
+    Bun.spawn(["notepad.exe", path], { stdout: "ignore", stderr: "ignore" }).unref();
+  } else {
+    console.log(`Token para la configuración del POS: ${config.token}`);
+  }
+}
+
+if (process.argv.includes("--mostrar-token")) {
+  showToken();
+  process.exit(0);
+}
+
+function startServer() {
+  try {
+    return Bun.serve(serverOptions);
+  } catch (error) {
+    // Ya hay un conector corriendo (se abrió dos veces, o el inicio de sesión y
+    // el instalador lo arrancaron a la vez). Sin consola nadie vería el error:
+    // se anota y se sale en silencio, el que ya corre sigue imprimiendo.
+    if ((error as { code?: string }).code === "EADDRINUSE") {
+      log(`El puerto ${config.port} ya está en uso: el conector ya está corriendo`);
+      process.exit(0);
+    }
+    throw error;
+  }
+}
+
+const serverOptions: Parameters<typeof Bun.serve>[0] = {
   // Loopback a propósito: el conector no se expone a la red de la sucursal.
   hostname: "127.0.0.1",
   port: config.port,
@@ -77,7 +131,11 @@ const server = Bun.serve({
     }
 
     if (!authorized(request)) {
-      return json({ error: "Token inválido. Cópialo de la ventana del Conector de impresión." }, 401, headers);
+      return json(
+        { error: "Token inválido. Búscalo en Inicio → \"Ver token del Conector de impresión\"." },
+        401,
+        headers
+      );
     }
 
     if (url.pathname === "/printers" && request.method === "GET") {
@@ -139,15 +197,11 @@ const server = Bun.serve({
 
     return json({ error: "Ruta no encontrada" }, 404, headers);
   },
-});
+};
+
+const server = startServer();
 
 log(`Conector de impresión escuchando en http://127.0.0.1:${server.port}`);
 log(`Token de emparejamiento: ${config.token}`);
 log(`Orígenes permitidos: ${config.allowedOrigins.join(", ")}`);
-console.log("");
-console.log("================================================================");
-console.log("  Glamouroso · Conector de impresión");
-console.log("  Deja esta ventana abierta mientras uses la caja.");
-console.log("");
-console.log(`  Token para la configuración del POS:  ${config.token}`);
-console.log("================================================================");
+log("Sin ventana: el token se ve en Inicio → \"Ver token del Conector de impresión\".");
