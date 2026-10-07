@@ -28,11 +28,11 @@ https://github.com/glamourosoapp-source/conector-impresion/releases/latest/downl
 Subir una etiqueta de versión basta. El workflow `.github/workflows/release.yml` corre en una máquina Windows de GitHub, compila el `.exe`, arma el instalador con Inno Setup, lo renombra a `setup-conector-impresion.exe` y crea la publicación:
 
 ```bash
-git tag v1.1.0
-git push origin v1.1.0
+git tag v1.3.0
+git push origin v1.3.0
 ```
 
-Antes de etiquetar, sube la versión en los tres lugares: `package.json`, `VERSION` en `src/server.ts` y `MyAppVersion` en `installer/setup.iss`.
+Antes de etiquetar, sube la versión en los dos lugares: `version` en `main.go` y `MyAppVersion` en `installer/setup.iss`.
 
 ### A mano, si GitHub Actions no está disponible
 
@@ -41,10 +41,11 @@ El ejecutable se compila en cualquier sistema, pero **el instalador necesita Win
 ### 1. El ejecutable (desde cualquier máquina)
 
 ```bash
-bun run build:win
+GOTOOLCHAIN=go1.20.14 GOOS=windows GOARCH=386 CGO_ENABLED=0 \
+  go build -trimpath -ldflags "-H windowsgui -s -w" -o dist/glamouroso-print-agent.exe .
 ```
 
-Deja `dist/glamouroso-print-agent.exe` (~94 MB, Bun compila su runtime dentro).
+Deja `dist/glamouroso-print-agent.exe` (~5 MB, sin runtime aparte).
 
 ### 2. El instalador (en una PC con Windows)
 
@@ -89,7 +90,7 @@ Firmarlo quitaría el aviso, pero cuesta (certificado anual) y la reputación co
 
 Hasta la 1.1.0 el conector abría una consola negra con el token y los tickets impresos. Estorbaba al cajero y, peor, cerrarla apagaba la impresión. Ahora:
 
-- Se compila como aplicación de ventana (`scripts/hide-console.ts` cambia el subsistema PE de consola a GUI; el `--windows-hide-console` de Bun solo funciona compilando en Windows): no abre ninguna ventana, ni al arrancar ni al imprimir (PowerShell se lanza con `windowsHide`).
+- Se compila como aplicación de ventana (`-H windowsgui` de Go): no abre ninguna ventana, ni al arrancar ni al imprimir.
 - No va al escritorio. En el menú Inicio quedan **Glamouroso Conector de Impresion** (lo arranca si se detuvo; si ya corre, la segunda copia ve el puerto ocupado y se sale sin hacer nada) y **Ver token del Conector de impresión**.
 - Lo que antes salía en la consola sigue en `%ProgramData%\GlamourosoPrintAgent\agent.log`.
 - Como ya no hay ventana que cerrar, el instalador lo detiene con `taskkill` antes de reemplazar el `.exe` (actualización) y antes de desinstalar. Al actualizar desde la 1.1.0 borra el acceso del escritorio viejo; el token no cambia, así que las cajas ya emparejadas siguen funcionando.
@@ -106,6 +107,18 @@ Es una alternativa a instalar la PWA desde la propia caja (botón **Instalar en 
 
 **Solo Windows.** El instalador es Inno Setup y no tiene equivalente para macOS. En una Mac la caja se instala igual de bien, pero por el botón de la propia caja: Chrome deja la app en Launchpad y se arrastra al Dock. El Conector de impresión sí corre en macOS (usa `lpstat`/`lp`), pero eso está ahí **para poder desarrollarlo y probarlo fuera de Windows**: no hay build compilado ni paquete para Mac, y no se ha validado contra una impresora térmica real en ese sistema. Las sucursales son PC con Windows.
 
+## En Go desde 1.3.0 (antes Bun)
+
+El 2026-10-06, al instalarlo en Washington, el `.exe` de Bun no arrancó: *"No se encuentra el punto de entrada ClosePseudoConsole"*. Esa PC tiene **Windows 10 1607** (2016) y Bun exige 1809 o más nuevo. En Chapala, además, la caja no veía la impresora: la lista salía de PowerShell `Get-Printer`, que no existe en Windows 7 y que falla si PowerShell está restringido.
+
+Por eso el conector se reescribió en Go, con la misma API, el mismo token y la misma carpeta de datos (las cajas ya emparejadas siguen funcionando sin tocar nada):
+
+- **Go 1.20 y 32 bits**: última versión de Go que compila para Windows 7 y 8; un `.exe` de 32 bits corre en Windows de 32 y de 64. No subir la versión de Go sin revisar las PC de las sucursales.
+- **Sin PowerShell**: impresoras con `EnumPrinters` y la predeterminada con `GetDefaultPrinter`; si la consulta completa falla se usa la rápida (solo nombres). El estado sale en palabras (Lista, Sin conexión, Sin papel...).
+- **~5 MB** en vez de ~94 MB.
+- Responde `Access-Control-Allow-Private-Network` a los orígenes permitidos, que es lo que Chrome pide para que una página https hable con loopback.
+- El instalador da permiso de modificación a los usuarios sobre `%ProgramData%\GlamourosoPrintAgent` y arranca el conector como el usuario de la caja (no como administrador), para que el log y el respaldo se puedan escribir.
+
 ## API
 
 | Método | Ruta | Para qué |
@@ -117,13 +130,12 @@ Es una alternativa a instalar la PWA desde la propia caja (botón **Instalar en 
 ## Desarrollo
 
 ```bash
-bun install
-bun run dev          # levanta en http://127.0.0.1:9377
-bun run typecheck
-bun run build:win    # dist/glamouroso-print-agent.exe
+go run .             # levanta en http://127.0.0.1:9377
+go test ./...
+GOOS=windows GOARCH=386 go vet ./...   # revisa también el código de Windows
 ```
 
-En macOS y Linux el conector usa `lpstat`/`lp` para poder probarse fuera de Windows; en producción usa `Get-Printer` y la API `winspool.drv` (`OpenPrinter` + `StartDocPrinter` con `DATATYPE = "RAW"`).
+En macOS y Linux el conector usa `lpstat`/`lp` para poder probarse fuera de Windows; en producción usa directo la API `winspool.drv`: `EnumPrinters` para listar y (`OpenPrinter` + `StartDocPrinter` con `DATATYPE = "RAW"`).
 
 **Por qué no `Out-Printer`**: manda el contenido como texto y el driver reinterpreta los comandos ESC/POS. El ticket sale con basura y sin corte de papel.
 
@@ -141,6 +153,8 @@ En macOS y Linux el conector usa `lpstat`/`lp` para poder probarse fuera de Wind
 - **Token inválido**: el token se regenera si se borra `token.txt`. Volver a copiarlo en la configuración del POS.
 - **El ticket sale con caracteres raros**: la impresora no está en la tabla CP850. Se puede cambiar en `escpos.ts` del Front (`ESC t`).
 - **No corta el papel**: la impresora no soporta el corte parcial (`GS V 66`). No impide imprimir.
+- **"No se encuentra el punto de entrada ClosePseudoConsole" al prender la PC**: quedó la versión 1.2.0 o anterior (Bun) en una PC con Windows 10 anterior a 1809. Correr el instalador 1.3.0 o más nuevo encima; reemplaza el `.exe` y conserva el token.
+- **La caja no muestra ninguna impresora**: revisar en Servicios que *Cola de impresión* esté iniciada y que la térmica aparezca en *Dispositivos e impresoras*. El conector lista lo mismo que Windows.
 
 ## Respaldo de la cola de la caja
 

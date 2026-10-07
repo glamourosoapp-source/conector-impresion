@@ -2,7 +2,7 @@
 ; Compilar con: iscc installer\setup.iss  (requiere dist\glamouroso-print-agent.exe)
 
 #define MyAppName "Glamouroso Conector de Impresion"
-#define MyAppVersion "1.2.0"
+#define MyAppVersion "1.3.0"
 #define MyAppPublisher "Anawim"
 #define MyAppExeName "glamouroso-print-agent.exe"
 #define PosShortcutName "Glamouroso Punto de venta"
@@ -35,6 +35,12 @@ Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion
 ; en Front/ y se copia aquí. Es el que ve el cajero en el escritorio.
 Source: "{#PosIcoName}"; DestDir: "{app}"; Flags: ignoreversion
 
+[Dirs]
+; El conector arranca como el usuario de la caja, pero la primera vez lo arranca
+; el instalador (como administrador) y la carpeta quedaria solo de lectura para
+; el cajero: el log y el respaldo de la cola no se podrian escribir.
+Name: "{commonappdata}\GlamourosoPrintAgent"; Permissions: users-modify
+
 [Tasks]
 Name: "posshortcut"; Description: "Crear el acceso directo del Punto de venta en el escritorio"; GroupDescription: "Punto de venta:"
 
@@ -59,7 +65,7 @@ Name: "{group}\{#PosShortcutName}"; Filename: "{code:GetBrowserPath}"; \
 
 [Run]
 ; Arranca el conector siempre (también en instalación silenciosa); no abre ventana.
-Filename: "{app}\{#MyAppExeName}"; Flags: nowait runhidden
+Filename: "{app}\{#MyAppExeName}"; Flags: nowait runhidden runasoriginaluser
 ; Al terminar, el token en el Bloc de notas para pegarlo en la configuración de la caja.
 Filename: "{app}\{#MyAppExeName}"; Parameters: "--mostrar-token"; Description: "Ver el token para emparejar la caja"; Flags: postinstall nowait skipifsilent
 
