@@ -28,11 +28,13 @@ https://github.com/glamourosoapp-source/conector-impresion/releases/latest/downl
 Subir una etiqueta de versión basta. El workflow `.github/workflows/release.yml` corre en una máquina Windows de GitHub, compila el `.exe`, arma el instalador con Inno Setup, lo renombra a `setup-conector-impresion.exe` y crea la publicación:
 
 ```bash
-git tag v1.3.0
-git push origin v1.3.0
+git tag v1.3.1
+git push origin v1.3.1
 ```
 
 Antes de etiquetar, sube la versión en los dos lugares: `version` en `main.go` y `MyAppVersion` en `installer/setup.iss`.
+
+**Numeración.** Cada publicación sube **el último número de uno en uno**: después de `v1.3.0` va `v1.3.1`, luego `v1.3.2`, y así. Siempre con la `v` y los tres números, para que en la caja (Configuración muestra la versión del conector) y por AnyDesk se lea igual. El número de en medio solo sube si cambia algo grande, como la reescritura en Go (1.2 → 1.3).
 
 ### A mano, si GitHub Actions no está disponible
 
